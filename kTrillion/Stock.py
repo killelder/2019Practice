@@ -40,18 +40,16 @@ def extract_train_test(reflen, outlen, start=1101, end=9999):
 					continue
 				x_data = np.concatenate((x_data,np.append(np.append(np.append(o[i:i+reflen]/c[reflen+i],h[i:i+reflen]/c[reflen+i]),c[i:i+reflen]/c[reflen+i]),l[i:i+reflen]/c[reflen+i]).reshape(-1,1)),axis=1)
 				profit = (c[reflen+outlen+i]-c[reflen+i])/c[reflen+i]
-				if profit > 0.03:
-					if profit*10 > 1:
-						y_data.append([1,0.3,-1])
-					else:
-						y_data.append([profit*10,0.3,-profit*10])
+				if profit > 0.1:
+					y_data.append([1,0,0,0,0])
+				elif profit > 0.03:
+					y_data.append([0,1,0,0,0])
 				elif profit > -0.03:
-					y_data.append([0,1,0])
+					y_data.append([0,0,1,0,0])
+				elif profit > -0.1:
+					y_data.append([0,0,0,1,0])
 				else:
-					if -profit*10 > 1:
-						y_data.append([-1,0.3,1])
-					else:
-						y_data.append([profit*10,0.3,-profit*20])
+					y_data.append([0,0,0,0,1])
 				performance.append(profit)
 			print(x_data.shape, len(y_data))
 	x_data = np.swapaxes(x_data, 0, 1)
@@ -70,24 +68,24 @@ def create_model(reflen):
 	l1 = Dense(160, activation='relu')(l0)
 	l2 = Dense(80, activation='relu')(l1)
 	l3 = Dense(20, activation='relu')(l2)
-	l4 = Dense(3, activation='softmax')(l3)
+	l4 = Dense(5, activation='softmax')(l3)
 	adam = optimizers.Adam(lr=0.0001)
 	model = Model(inputs=[input_data], output=l4)
-	model.compile(optimizer=adam, loss='mse')
-	#model.compile(optimizer=adam, loss='categorical_crossentropy')
+	#model.compile(optimizer=adam, loss='mse')
+	model.compile(optimizer=adam, loss='categorical_crossentropy')
 	return model
 #df = pd.read_csv("./data/1101.csv")
 #print(df["high"][0:20].values + df["close"][0:20].values)
 #a = (np.concatenate((df["high"].replace("--",np.nan).values.astype(float),df["close"].replace("--","-1").values.astype(float)),axis=0))
 #print(df["close"].replace("--",np.nan).fillna("ffill").values)
 #print(a.shape)
-reflen = 30
+reflen = 50
 outlen = 10
 #xdata_train, ydata_train = loadtrain(reflen, outlen)
 #xdata_test1, ydata_test1 = extract_train_test(reflen, outlen, 1101, 1102)
 #xdata_test2, ydata_test2 = extract_train_test(reflen, outlen, 1301, 1302)
 #xdata_test3, ydata_test3 = extract_train_test(reflen, outlen, 2330, 2331)
-xdata, ydata, performance = extract_train_test(reflen, outlen, 2301, 2310)
+xdata, ydata, performance = extract_train_test(reflen, outlen, 2301, 2305)
 xdata_train = xdata[:int(xdata.shape[0]/2)]
 ydata_train = ydata[:int(ydata.shape[0]/2)]
 xdata_test1 = xdata[int(xdata.shape[0]/2):]
@@ -109,16 +107,22 @@ while True:
 		totalprofit1 = 0
 		totalprofit2 = 0
 		totalprofit3 = 0
+		totalprofit4 = 0
+		totalprofit5 = 0
 		ttlrpt.write(str(i)+",")
 		for j in range(prd.shape[0]):
-			rpt.write(str(prd[j][0]) + "," + str(prd[j][1]) + "," + str(prd[j][2]) + "," + str(performance[j]) + "," + str(np.argmax(prd[j])) + ",\n")
+			rpt.write(str(prd[j][0]) + "," + str(prd[j][1]) + "," + str(prd[j][2]) + "," + str(prd[j][3]) + "," + str(prd[j][4]) + "," + str(performance[j]) + "," + str(np.argmax(prd[j])) + ",\n")
 			if np.argmax(prd[j]) == 0:
 				totalprofit1 = totalprofit1 + performance[j] - 0.02
 			if np.argmax(prd[j]) == 1:
 				totalprofit2 = totalprofit2 + performance[j] - 0.02
 			if np.argmax(prd[j]) == 2:
-				totalprofit3 = totalprofit3 - performance[j] - 0.02
-		ttlrpt.write(str(totalprofit1)+","+str(totalprofit2)+","+str(totalprofit3)+",\n")
+				totalprofit3 = totalprofit3 + performance[j] - 0.02
+			if np.argmax(prd[j]) == 3:
+				totalprofit4 = totalprofit4 - performance[j] - 0.02
+			if np.argmax(prd[j]) == 4:
+				totalprofit5 = totalprofit5 - performance[j] - 0.02
+		ttlrpt.write(str(totalprofit1)+","+str(totalprofit2)+","+str(totalprofit3)+","+str(totalprofit4)+","+str(totalprofit5)+",\n")
 		ttlrpt.flush()
 		rpt.close()
 
